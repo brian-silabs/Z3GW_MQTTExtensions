@@ -4,6 +4,7 @@ Edited from GSDK 3.2.2
 Adds TC Join handler event access to MQTT broker
 
 ## How To Install
+0. Make a backup of your SDK (just in case)
 1. Replace existing plugins by these ones within the SDK
 2. Close any .ISC file opened in Simplicity
 3. Refresh SDK within Simplicity Studio (Go to Preferences->SDKs, click on your modified SDK within the list and hit F5)
