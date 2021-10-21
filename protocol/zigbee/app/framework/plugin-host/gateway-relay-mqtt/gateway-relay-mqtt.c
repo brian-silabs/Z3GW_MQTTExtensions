@@ -1256,6 +1256,13 @@ void emberAfPluginOtaServerUpdateStartedCallback(uint16_t manufacturerId,
                       &firmwareVersion);
 }
 
+
+void emberAfPluginDeviceTableDeviceAttemptingJoinCallback(EmberEUI64 eui64)
+{
+  emberAfAppPrintln("DEBUG_Deviceattempting join");
+  //TODO MQTT publish to broker
+}
+
 void emberAfPluginDeviceTableNewDeviceCallback(EmberEUI64 nodeEui64)
 {
   publishMqttDeviceJoined(nodeEui64);

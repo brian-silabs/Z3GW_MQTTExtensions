@@ -79,3 +79,13 @@ void emberAfPluginDeviceTableIndexRemovedCallback(uint16_t currentIndex)
 void emberAfPluginDeviceTableIndexAddedCallback(uint16_t index)
 {
 }
+
+/** @brief Device attempting to join
+ *
+ * This callback is called when a new device joins the gateway.
+ *
+ * @param uui64   Ver.: always
+ */
+void emberAfPluginDeviceTableDeviceAttemptingJoinCallback(EmberEUI64 eui64)
+{
+}

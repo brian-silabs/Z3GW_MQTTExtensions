@@ -580,7 +580,8 @@ void emberAfTrustCenterJoinCallback(EmberNodeId newNodeId,
       // Broadcast permit joining to new router as it joins.
       broadcastPermitJoin(254);
       emberAfCorePrintln("new device line %d", __LINE__);
-      emberAfDeviceTableNewDeviceJoinHandler(newNodeId, newNodeEui64);
+      emberAfPluginDeviceTableDeviceAttemptingJoinCallback(newNodeEui64);//Letting external SW modules know
+      emberAfDeviceTableNewDeviceJoinHandler(newNodeId, newNodeEui64);//internal to device table plugin
       break;
     case EMBER_DEVICE_LEFT:
       newDeviceLeftHandler(newNodeEui64);
