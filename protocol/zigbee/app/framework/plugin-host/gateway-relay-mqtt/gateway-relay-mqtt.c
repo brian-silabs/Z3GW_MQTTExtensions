@@ -1270,8 +1270,7 @@ void emberAfPluginOtaServerUpdateStartedCallback(uint16_t manufacturerId,
 
 void emberAfPluginDeviceTableDeviceAttemptingJoinCallback(EmberEUI64 eui64)
 {
-  emberAfAppPrintln("DEBUG_Deviceattempting join");
-  publishMqttDeviceAttemptingJoin(nodeEui64);
+  publishMqttDeviceAttemptingJoin(eui64);
 }
 
 void emberAfPluginDeviceTableNewDeviceCallback(EmberEUI64 nodeEui64)
