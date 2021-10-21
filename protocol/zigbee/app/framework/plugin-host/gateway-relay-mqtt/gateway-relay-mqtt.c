@@ -521,6 +521,17 @@ static void publishMqttDeviceStateChange(EmberEUI64 eui64,
   publishMqttTopic("devicestatechange", stateChangeJson);
 }
 
+static void publishMqttDeviceAttemptingJoin(EmberEUI64 eui64)
+{
+  char euiString[EUI64_STRING_LENGTH] = { 0 };
+  cJSON* nodeAttemptingJoinJson;
+
+  eui64ToString(eui64, euiString);
+  nodeAttemptingJoinJson = cJSON_CreateObject();
+  cJSON_AddStringToObject(nodeAttemptingJoinJson, "eui64", euiString);
+  publishMqttTopic("deviceAttemptingJoin", nodeAttemptingJoinJson);
+}
+
 static void publishMqttDeviceJoined(EmberEUI64 eui64)
 {
   //This function call breaks simulation test, mask it out
@@ -1260,7 +1271,7 @@ void emberAfPluginOtaServerUpdateStartedCallback(uint16_t manufacturerId,
 void emberAfPluginDeviceTableDeviceAttemptingJoinCallback(EmberEUI64 eui64)
 {
   emberAfAppPrintln("DEBUG_Deviceattempting join");
-  //TODO MQTT publish to broker
+  publishMqttDeviceAttemptingJoin(nodeEui64);
 }
 
 void emberAfPluginDeviceTableNewDeviceCallback(EmberEUI64 nodeEui64)
