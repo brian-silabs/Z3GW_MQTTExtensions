@@ -92,6 +92,10 @@
 // Bookkeeping header
 #include "znet-bookkeeping.h"
 
+#ifdef EMBER_AF_PLUGIN_GATEWAY_RELAY_MQTT
+  extern EmberEventControl emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventControl;
+#endif
+
 //------------------------------------------------------------------------------
 
 #ifdef EZSP_HOST
@@ -1084,14 +1088,14 @@ void emAfStackStatusHandler(EmberStatus status)
       break;
 
     case EMBER_NETWORK_OPENED:
-#ifdef EMBER_AF_PLUGIN_TRANSPORT_MQTT
+#ifdef EMBER_AF_PLUGIN_GATEWAY_RELAY_MQTT
       emberEventControlSetActive(emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventControl);
 #endif
       emberAfAppPrintln("EMBER_NETWORK_OPENED: %u sec", emberAfGetOpenNetworkDurationSec());
       break;
 
     case EMBER_NETWORK_CLOSED:
-#ifdef EMBER_AF_PLUGIN_TRANSPORT_MQTT
+#ifdef EMBER_AF_PLUGIN_GATEWAY_RELAY_MQTT
       emberEventControlSetActive(emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventControl);
 #endif
       emberAfAppPrintln("EMBER_NETWORK_CLOSED");
