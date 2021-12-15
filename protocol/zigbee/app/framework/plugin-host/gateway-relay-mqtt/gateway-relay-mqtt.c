@@ -1136,7 +1136,7 @@ static void handleUpdateSettingsMessage(cJSON* messageJson)
 static void handleNetworkOpenStateMessage(cJSON* messageJson)
 {
   emberAfAppPrintln("Handling Network Open State Message");
-  publishMqttNetworkOpenState();
+  emberEventControlSetActive(emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventControl);
 }
 
 // String/other helpers
@@ -1223,7 +1223,7 @@ void emberAfPluginGatewayRelayMqttInitCallback(void)
                                     handleUpdateSettingsMessage));
   emberAfPluginLinkedListPushBack(topicHandlerList,
                                   (void*)buildTopicHandler(
-                                    "networkOpenState",
+                                    "isNetworkOpen",
                                     handleNetworkOpenStateMessage));
   emberEventControlSetActive(emberAfPluginGatewayRelayMqttStateUpdateEventControl);
 }
