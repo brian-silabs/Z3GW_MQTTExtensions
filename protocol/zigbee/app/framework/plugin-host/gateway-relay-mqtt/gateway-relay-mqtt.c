@@ -212,6 +212,7 @@ static MqttTopicHandlerMap* buildTopicHandler(
 static void handleCommandsMessage(cJSON* messageJson);
 static void handlePublishStateMessage(cJSON* messageJson);
 static void handleUpdateSettingsMessage(cJSON* messageJson);
+static void handleNetworkOpenStateMessage(cJSON* messageJson);
 
 // Handy string creation routines.
 static char* createOneByteHexString(uint8_t value)
@@ -1132,6 +1133,12 @@ static void handleUpdateSettingsMessage(cJSON* messageJson)
   }
 }
 
+static void handleNetworkOpenStateMessage(cJSON* messageJson)
+{
+  emberAfAppPrintln("Handling Network Open State Message");
+  publishMqttNetworkOpenState();
+}
+
 // String/other helpers
 static void eui64ToString(EmberEUI64 eui, char* euiString)
 {
@@ -1214,6 +1221,10 @@ void emberAfPluginGatewayRelayMqttInitCallback(void)
                                   (void*)buildTopicHandler(
                                     "updatesettings",
                                     handleUpdateSettingsMessage));
+  emberAfPluginLinkedListPushBack(topicHandlerList,
+                                  (void*)buildTopicHandler(
+                                    "networkOpenState",
+                                    handleNetworkOpenStateMessage));
   emberEventControlSetActive(emberAfPluginGatewayRelayMqttStateUpdateEventControl);
 }
 
