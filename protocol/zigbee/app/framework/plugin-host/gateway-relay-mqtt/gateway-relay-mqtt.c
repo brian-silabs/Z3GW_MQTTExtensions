@@ -133,6 +133,9 @@ void emberAfPluginGatewayRelayMqttProcessCommandEventHandler(void);
 EmberEventControl emberAfPluginGatewayRelayMqttStateUpdateEventControl;
 void emberAfPluginGatewayRelayMqttStateUpdateEventHandler(void);
 
+EmberEventControl emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventControl;
+void emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventHandler(void);
+
 // String/other helpers
 static void nodeIdToString(EmberNodeId nodeId, char* nodeIdString);
 static void eui64ToString(EmberEUI64 eui, char* euiString);
@@ -189,6 +192,7 @@ static void publishMqttBindTableReponse(EmberNodeId nodeId,
                                         EmberApsFrame* apsFrame,
                                         uint8_t* message,
                                         uint16_t length);
+static void publishMqttNetworkOpenState(void);
 
 // MQTT topic and handler list
 typedef void (*MqttTopicHandler)(cJSON* messageJson);
@@ -208,6 +212,7 @@ static MqttTopicHandlerMap* buildTopicHandler(
 static void handleCommandsMessage(cJSON* messageJson);
 static void handlePublishStateMessage(cJSON* messageJson);
 static void handleUpdateSettingsMessage(cJSON* messageJson);
+static void handleNetworkOpenStateMessage(cJSON* messageJson);
 
 // Handy string creation routines.
 static char* createOneByteHexString(uint8_t value)
@@ -362,6 +367,22 @@ static void publishMqttTopic(char * topicNameString, cJSON * nodeJson)
   free(nodeJsonString);
   cJSON_Delete(nodeJson);
   free(topic);
+}
+
+static void publishMqttNetworkOpenState(void)
+{
+  bool networkOpened = false;
+  uint8_t open_duration = 0;
+  cJSON* netowrkOpenStateJson;
+
+  open_duration = emberAfGetOpenNetworkDurationSec();
+  networkOpened = ((open_duration > 0) ? true : false) ;
+
+  netowrkOpenStateJson = cJSON_CreateObject();
+  cJSON_AddBoolToObject(netowrkOpenStateJson, "open", networkOpened);
+  cJSON_AddIntegerToObject(netowrkOpenStateJson, "duration", open_duration);
+
+  publishMqttTopic("networkOpeningState", netowrkOpenStateJson);
 }
 
 static void publishMqttHeartbeat(void)
@@ -1112,6 +1133,12 @@ static void handleUpdateSettingsMessage(cJSON* messageJson)
   }
 }
 
+static void handleNetworkOpenStateMessage(cJSON* messageJson)
+{
+  emberAfAppPrintln("Handling Network Open State Message");
+  emberEventControlSetActive(emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventControl);
+}
+
 // String/other helpers
 static void eui64ToString(EmberEUI64 eui, char* euiString)
 {
@@ -1194,6 +1221,10 @@ void emberAfPluginGatewayRelayMqttInitCallback(void)
                                   (void*)buildTopicHandler(
                                     "updatesettings",
                                     handleUpdateSettingsMessage));
+  emberAfPluginLinkedListPushBack(topicHandlerList,
+                                  (void*)buildTopicHandler(
+                                    "isNetworkOpen",
+                                    handleNetworkOpenStateMessage));
   emberEventControlSetActive(emberAfPluginGatewayRelayMqttStateUpdateEventControl);
 }
 
@@ -1701,6 +1732,13 @@ bool emberAfPluginGatewayRelayMqttPreZDOMessageReceivedCallback(
 }
 
 // event handlers
+
+void emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventHandler(void)
+{
+  emberEventControlSetInactive(emberAfPluginGatewayRelayMqttNetworkOpeningStateUpdateEventControl);
+  publishMqttNetworkOpenState();
+}
+
 void emberAfPluginGatewayRelayMqttHeartbeatEventHandler(void)
 {
   publishMqttHeartbeat();
