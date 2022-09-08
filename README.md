@@ -42,8 +42,11 @@ Payload : `{"open":false,"duration":0}`
 Added 3 ZDO responses passthrough to MQTT:
 
 Publish Topic : `gw/D0CF5EFFFE68A82D/zdoresponse`
+
 Power Payload : `{"zdoType":"powerResponse","status":"0x00","shortId":"0xF084","payloadBigEndian":"0x10c1"}`
+
 Node Payload : `{"zdoType":"nodeResponse","status":"0x00","shortId":"0xF084","payloadBigEndian":"0x01408e0210525200002c520000"}`
 
 Successful Simple Payload : `{"zdoType":"simpleResponse","status":"0x00","shortId":"0xF084","payloadBigEndian":"0x1a0104010101010700000300040005000600080000100219000604"}`
+
 Unsupported Simple Payload : `{"zdoType":"simpleResponse","status":"0x83","shortId":"0xF084","payloadBigEndian":"0x00"}`
