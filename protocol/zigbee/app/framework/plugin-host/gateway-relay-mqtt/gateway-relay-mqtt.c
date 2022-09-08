@@ -90,6 +90,9 @@ static const EmberEUI64 NULL_EUI = { 0, 0, 0, 0, 0, 0, 0, 0 };
 #define BINDING_ENTRY_DEST_EUI           12
 #define BINDING_ENTRY_DEST_ENDPOINT      20
 
+#define ZDO_RESPONSE_STATUS     1
+#define ZDO_RESPONSE_DATA       4
+
 // Gateway global variables
 static EmberEUI64 gatewayEui64;
 static char gatewayEui64String[EUI64_STRING_LENGTH] = { 0 };
@@ -262,9 +265,11 @@ static char* createHexStringFromByteArray(uint8_t *array, uint32_t arraySize)
 
   for (i = 0; i < arraySize; i++)
   {
-    tailPtr += sprintf(outputString, "%02x", array[i]);
+    tailPtr += sprintf(tailPtr, "%02x", array[i]);
   }
-  tailPtr += sprintf(outputString, "\0");
+  tailPtr += sprintf(tailPtr, "\0");
+
+  return outputString;
 }
 
 // MQTT Helper Functions
@@ -910,11 +915,22 @@ static void publishMqttNodeResponse(EmberNodeId nodeId,
                                     uint16_t length)
 {
   cJSON* objectJson;
+  char* dataString;
 
   objectJson = cJSON_CreateObject();
   cJSON_AddStringToObject(objectJson, "zdoType", "nodeResponse");
-  cJSON_AddIntegerToObject(objectJson, "shortId", nodeId);
 
+  dataString = createOneByteHexString(message[ZDO_RESPONSE_STATUS]);
+  cJSON_AddStringToObject(objectJson, "status", dataString);
+  free(dataString);
+
+  dataString = createTwoByteHexString(nodeId);
+  cJSON_AddStringToObject(objectJson, "shortId", dataString);
+  free(dataString);
+
+  dataString = createHexStringFromByteArray(&message[ZDO_RESPONSE_DATA], (length - ZDO_RESPONSE_DATA));
+  cJSON_AddStringToObject(objectJson, "payloadBigEndian", dataString);//LSByte first
+  free(dataString);
 
   publishMqttTopic(ZDO_RESPONSE_TOPIC, objectJson);
 }
@@ -925,10 +941,22 @@ static void publishMqttSimpleResponse(EmberNodeId nodeId,
                                     uint16_t length)
 {
   cJSON* objectJson;
+  char* dataString;
 
   objectJson = cJSON_CreateObject();
   cJSON_AddStringToObject(objectJson, "zdoType", "simpleResponse");
-  cJSON_AddIntegerToObject(objectJson, "shortId", nodeId);
+
+  dataString = createOneByteHexString(message[ZDO_RESPONSE_STATUS]);
+  cJSON_AddStringToObject(objectJson, "status", dataString);
+  free(dataString);
+
+  dataString = createTwoByteHexString(nodeId);
+  cJSON_AddStringToObject(objectJson, "shortId", dataString);
+  free(dataString);
+
+  dataString = createHexStringFromByteArray(&message[ZDO_RESPONSE_DATA], (length - ZDO_RESPONSE_DATA));
+  cJSON_AddStringToObject(objectJson, "payloadBigEndian", dataString);//LSByte first
+  free(dataString);
 
   publishMqttTopic(ZDO_RESPONSE_TOPIC, objectJson);
 }
@@ -939,10 +967,22 @@ static void publishMqttPowerResponse(EmberNodeId nodeId,
                                     uint16_t length)
 {
   cJSON* objectJson;
+  char* dataString;
 
   objectJson = cJSON_CreateObject();
   cJSON_AddStringToObject(objectJson, "zdoType", "powerResponse");
-  cJSON_AddIntegerToObject(objectJson, "shortId", nodeId);
+
+  dataString = createOneByteHexString(message[ZDO_RESPONSE_STATUS]);
+  cJSON_AddStringToObject(objectJson, "status", dataString);
+  free(dataString);
+
+  dataString = createTwoByteHexString(nodeId);
+  cJSON_AddStringToObject(objectJson, "shortId", dataString);
+  free(dataString);
+
+  dataString = createHexStringFromByteArray(&message[ZDO_RESPONSE_DATA], (length - ZDO_RESPONSE_DATA));
+  cJSON_AddStringToObject(objectJson, "payloadBigEndian", dataString);//LSByte first
+  free(dataString);
 
   publishMqttTopic(ZDO_RESPONSE_TOPIC, objectJson);
 }
@@ -1937,14 +1977,20 @@ void emberPluginGatewayRelayMqttSetHeartBeat(uint16_t intervalMs)
  *
  * @param memoryAllocation   Ver.: always
  */
-void emberAfNcpInitCallback(boolean memoryAllocation)
+void emberAfPluginGatewayRelayMqttNcpInitCallback(boolean memoryAllocation)
 {
   if(memoryAllocation == FALSE )
   {
-    EzspStatus ezspStatus = ezspSetConfigurationValue(EZSP_CONFIG_APPLICATION_ZDO_FLAGS,
-                                                      EMBER_APP_RECEIVES_SUPPORTED_ZDO_REQUESTS);
-      emberAfAppFlush();
-      emberAfAppPrint("Ezsp Config - EZSP_CONFIG_APPLICATION_ZDO_FLAGS: 0x%2x:\n", ezspStatus);
-  }
+    uint16_t currentSetting = 0;
+    EzspStatus ezspStatus = ezspGetConfigurationValue(EZSP_CONFIG_APPLICATION_ZDO_FLAGS,
+                                                      &currentSetting);
 
+    if(ezspStatus == EZSP_SUCCESS){
+      currentSetting |= EMBER_APP_RECEIVES_SUPPORTED_ZDO_REQUESTS;
+      ezspStatus = ezspSetConfigurationValue( EZSP_CONFIG_APPLICATION_ZDO_FLAGS,
+                                              currentSetting);
+      emberAfAppFlush();
+      emberAfAppPrint("MQTT Gateway - Ezsp Config - EZSP_CONFIG_APPLICATION_ZDO_FLAGS to 0x%2x: 0x%2x:\n", currentSetting, ezspStatus);
+    }
+  }
 }
