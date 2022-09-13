@@ -90,6 +90,9 @@ static const EmberEUI64 NULL_EUI = { 0, 0, 0, 0, 0, 0, 0, 0 };
 #define BINDING_ENTRY_DEST_EUI           12
 #define BINDING_ENTRY_DEST_ENDPOINT      20
 
+#define ZDO_RESPONSE_STATUS     1
+#define ZDO_RESPONSE_DATA       4
+
 // Gateway global variables
 static EmberEUI64 gatewayEui64;
 static char gatewayEui64String[EUI64_STRING_LENGTH] = { 0 };
@@ -188,6 +191,22 @@ static void publishMqttBindResponse(EmberNodeId nodeId,
                                     EmberApsFrame* apsFrame,
                                     uint8_t* message,
                                     uint16_t length);
+
+static void publishMqttNodeResponse(EmberNodeId nodeId,
+                                    EmberApsFrame* apsFrame,
+                                    uint8_t* message,
+                                    uint16_t length);
+
+static void publishMqttSimpleResponse(EmberNodeId nodeId,
+                                    EmberApsFrame* apsFrame,
+                                    uint8_t* message,
+                                    uint16_t length);
+
+static void publishMqttPowerResponse(EmberNodeId nodeId,
+                                    EmberApsFrame* apsFrame,
+                                    uint8_t* message,
+                                    uint16_t length);
+
 static void publishMqttBindTableReponse(EmberNodeId nodeId,
                                         EmberApsFrame* apsFrame,
                                         uint8_t* message,
@@ -228,6 +247,28 @@ static char* createTwoByteHexString(uint16_t value)
   char* outputString = (char *) malloc(TWO_BYTE_HEX_STRING_SIZE);
 
   sprintf(outputString, "0x%04X", value);
+  return outputString;
+}
+
+static char* createHexStringFromByteArray(uint8_t *array, uint32_t arraySize)
+{
+  //String size becomes :
+  //2x the array size as one byte in hex is displayed as 2 characters
+  //Plus 0x prefix (2 characters)
+  //Plus Null terminator
+  char* outputString = (char *) malloc((2 * arraySize) + 3);
+  char* tailPtr = outputString;
+  int i = 0;
+
+  //Add prefix
+  tailPtr += sprintf(outputString, "0x");
+
+  for (i = 0; i < arraySize; i++)
+  {
+    tailPtr += sprintf(tailPtr, "%02x", array[i]);
+  }
+  tailPtr += sprintf(tailPtr, "\0");
+
   return outputString;
 }
 
@@ -865,6 +906,84 @@ static void publishMqttBindResponse(EmberNodeId nodeId,
     message[DEVICE_TABLE_BIND_RESPONSE_STATUS]);
   cJSON_AddStringToObject(objectJson, "status", dataString);
   free(dataString);
+  publishMqttTopic(ZDO_RESPONSE_TOPIC, objectJson);
+}
+
+static void publishMqttNodeResponse(EmberNodeId nodeId,
+                                    EmberApsFrame* apsFrame,
+                                    uint8_t* message,
+                                    uint16_t length)
+{
+  cJSON* objectJson;
+  char* dataString;
+
+  objectJson = cJSON_CreateObject();
+  cJSON_AddStringToObject(objectJson, "zdoType", "nodeResponse");
+
+  dataString = createOneByteHexString(message[ZDO_RESPONSE_STATUS]);
+  cJSON_AddStringToObject(objectJson, "status", dataString);
+  free(dataString);
+
+  dataString = createTwoByteHexString(nodeId);
+  cJSON_AddStringToObject(objectJson, "shortId", dataString);
+  free(dataString);
+
+  dataString = createHexStringFromByteArray(&message[ZDO_RESPONSE_DATA], (length - ZDO_RESPONSE_DATA));
+  cJSON_AddStringToObject(objectJson, "payloadBigEndian", dataString);//LSByte first
+  free(dataString);
+
+  publishMqttTopic(ZDO_RESPONSE_TOPIC, objectJson);
+}
+
+static void publishMqttSimpleResponse(EmberNodeId nodeId,
+                                    EmberApsFrame* apsFrame,
+                                    uint8_t* message,
+                                    uint16_t length)
+{
+  cJSON* objectJson;
+  char* dataString;
+
+  objectJson = cJSON_CreateObject();
+  cJSON_AddStringToObject(objectJson, "zdoType", "simpleResponse");
+
+  dataString = createOneByteHexString(message[ZDO_RESPONSE_STATUS]);
+  cJSON_AddStringToObject(objectJson, "status", dataString);
+  free(dataString);
+
+  dataString = createTwoByteHexString(nodeId);
+  cJSON_AddStringToObject(objectJson, "shortId", dataString);
+  free(dataString);
+
+  dataString = createHexStringFromByteArray(&message[ZDO_RESPONSE_DATA], (length - ZDO_RESPONSE_DATA));
+  cJSON_AddStringToObject(objectJson, "payloadBigEndian", dataString);//LSByte first
+  free(dataString);
+
+  publishMqttTopic(ZDO_RESPONSE_TOPIC, objectJson);
+}
+
+static void publishMqttPowerResponse(EmberNodeId nodeId,
+                                    EmberApsFrame* apsFrame,
+                                    uint8_t* message,
+                                    uint16_t length)
+{
+  cJSON* objectJson;
+  char* dataString;
+
+  objectJson = cJSON_CreateObject();
+  cJSON_AddStringToObject(objectJson, "zdoType", "powerResponse");
+
+  dataString = createOneByteHexString(message[ZDO_RESPONSE_STATUS]);
+  cJSON_AddStringToObject(objectJson, "status", dataString);
+  free(dataString);
+
+  dataString = createTwoByteHexString(nodeId);
+  cJSON_AddStringToObject(objectJson, "shortId", dataString);
+  free(dataString);
+
+  dataString = createHexStringFromByteArray(&message[ZDO_RESPONSE_DATA], (length - ZDO_RESPONSE_DATA));
+  cJSON_AddStringToObject(objectJson, "payloadBigEndian", dataString);//LSByte first
+  free(dataString);
+
   publishMqttTopic(ZDO_RESPONSE_TOPIC, objectJson);
 }
 
@@ -1707,7 +1826,14 @@ bool emberAfPluginGatewayRelayMqttPreZDOMessageReceivedCallback(
   switch (apsFrame->clusterId) {
     case ACTIVE_ENDPOINTS_RESPONSE:
       break;
+    case NODE_DESCRIPTOR_RESPONSE:
+      publishMqttNodeResponse(emberNodeId, apsFrame, message, length);
+      break;
     case SIMPLE_DESCRIPTOR_RESPONSE:
+      publishMqttSimpleResponse(emberNodeId, apsFrame, message, length);
+      break;
+    case POWER_DESCRIPTOR_RESPONSE:
+      publishMqttPowerResponse(emberNodeId, apsFrame, message, length);
       break;
     case END_DEVICE_ANNOUNCE:
       break;
@@ -1834,4 +1960,37 @@ void emberAfPluginGatewayRelayMqttProcessCommandEventHandler(void)
 void emberPluginGatewayRelayMqttSetHeartBeat(uint16_t intervalMs)
 {
   heatBeatRateMs = intervalMs;
+}
+
+/** @brief Ncp Init
+ *
+ * This function is called when the network coprocessor is being initialized,
+ * either at startup or upon reset.  It provides applications on opportunity to
+ * perform additional configuration of the NCP.  The function is always called
+ * twice when the NCP is initialized.  In the first invocation, memoryAllocation
+ * will be true and the application should only issue EZSP commands that affect
+ * memory allocation on the NCP.  For example, tables on the NCP can be resized
+ * in the first call.  In the second invocation, memoryAllocation will be false
+ * and the application should only issue EZSP commands that do not affect memory
+ * allocation.  For example, tables on the NCP can be populated in the second
+ * call.  This callback is not called on SoCs.
+ *
+ * @param memoryAllocation   Ver.: always
+ */
+void emberAfPluginGatewayRelayMqttNcpInitCallback(boolean memoryAllocation)
+{
+  if(memoryAllocation == FALSE )
+  {
+    uint16_t currentSetting = 0;
+    EzspStatus ezspStatus = ezspGetConfigurationValue(EZSP_CONFIG_APPLICATION_ZDO_FLAGS,
+                                                      &currentSetting);
+
+    if(ezspStatus == EZSP_SUCCESS){
+      currentSetting |= EMBER_APP_RECEIVES_SUPPORTED_ZDO_REQUESTS;
+      ezspStatus = ezspSetConfigurationValue( EZSP_CONFIG_APPLICATION_ZDO_FLAGS,
+                                              currentSetting);
+      emberAfAppFlush();
+      emberAfAppPrint("MQTT Gateway - Ezsp Config - EZSP_CONFIG_APPLICATION_ZDO_FLAGS to 0x%2x: 0x%2x:\n", currentSetting, ezspStatus);
+    }
+  }
 }
